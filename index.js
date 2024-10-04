@@ -40,13 +40,24 @@ io.on("connection", (socket) => {
     io.to(user.room).emit("room", {
       data: { users: getRoomUsers(user.room) },
     });
+
   });
 
   socket.on("sendMessage", ({ message, params }) => {
+    console.log(params)
     const user = findUser(params);
 
     if (user) {
       io.to(user.room).emit("message", { data: { user, message } });
+    }
+  });
+
+  socket.on("sendWrite", ({ isWrite, params }) => {
+    console.log(isWrite, params)
+    const user = findUser(params);
+
+    if (user) {
+      io.to(user.room).emit("messageWrite", { data: { user, isWrite } });
     }
   });
 
