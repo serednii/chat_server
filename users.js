@@ -3,7 +3,7 @@ const { trimStr } = require("./utils");
 let users = [];  //{ name: 'f', room: '2', time: 1728149544191 }
 
 const findUser = (user) => {
-  // console.log(user)
+  console.log(user)
   try {
     const userName = trimStr(user.name);
     const userRoom = trimStr(user.room);

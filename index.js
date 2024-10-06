@@ -19,12 +19,13 @@ const io = new Server(server, {
     methods: ["GET", "POST"],
   },
 });
+// io.setMaxListeners(200);
 
 io.on("connection", (socket) => {
   socket.on("join", ({ name, room }) => {
     try {
       socket.join(room);
-
+      console.log("join")
       const { user, isExist } = addUser({ name, room, time: new Date().getTime(), status: "active" });
 
       const userMessage = isExist
@@ -67,7 +68,7 @@ io.on("connection", (socket) => {
 
       const user = findUser(params);
       if (user) {
-        updateDateUsers(params)
+        // updateDateUsers(params)
         io.to(user.room).emit("messageWrite", { data: { user, isWrite } });
       }
     } catch (error) {
@@ -95,7 +96,7 @@ io.on("connection", (socket) => {
     }
   });
 
-  io.on("disconnect", () => {
+  socket.on("disconnect", () => {
     console.log("Disconnect");
   });
 });
@@ -103,3 +104,4 @@ io.on("connection", (socket) => {
 server.listen(5000, () => {
   console.log("Server is running");
 });
+
