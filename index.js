@@ -49,7 +49,7 @@ io.on("connection", (socket) => {
 
   socket.on("sendMessage", ({ message, params }) => {
     try {
-      console.log("sendMessage params", params)
+      // console.log("sendMessage params", params)
       const user = findUser(params);
       if (user) {
         updateDateUsers(params)
@@ -63,7 +63,7 @@ io.on("connection", (socket) => {
   socket.on("sendWrite", ({ isWrite, params }) => {
     try {
 
-      console.log("sendWrite params", params)
+      // console.log("sendWrite params", params)
 
       const user = findUser(params);
       if (user) {

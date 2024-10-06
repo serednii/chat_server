@@ -1,5 +1,5 @@
 const trimStr = (str) => {
-    console.log(str)
+    // console.log(str)
     try {
         const newStr = str.trim().toLowerCase()
         return newStr
