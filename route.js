@@ -15,6 +15,7 @@ router.get("/", (req, res) => {
   );
 
   res.send("Это только мой мир.");
+
 });
 
 module.exports = router;

@@ -5,12 +5,13 @@ const cors = require("cors");
 const app = express();
 
 const route = require("./route");
-const { addUser, findUser, getRoomUsers, removeUser } = require("./users");
+const { addUser, findUser, getRoomUsers, removeUser, updateDateUsers, checkTimeUsers } = require("./users");
 
 app.use(cors({ origin: "*" }));
 app.use(route);
 
 const server = http.createServer(app);
+setInterval(() => checkTimeUsers(), 1000 * 10)
 
 const io = new Server(server, {
   cors: {
@@ -23,7 +24,7 @@ io.on("connection", (socket) => {
   socket.on("join", ({ name, room }) => {
     socket.join(room);
 
-    const { user, isExist } = addUser({ name, room });
+    const { user, isExist } = addUser({ name, room, time: new Date().getTime(), status: "active" });
 
     const userMessage = isExist
       ? `${user.name}, here you go again`
@@ -44,19 +45,20 @@ io.on("connection", (socket) => {
   });
 
   socket.on("sendMessage", ({ message, params }) => {
-    console.log(params)
+    console.log("sendMessage params", params)
     const user = findUser(params);
-
     if (user) {
+      updateDateUsers(params)
       io.to(user.room).emit("message", { data: { user, message } });
     }
   });
 
   socket.on("sendWrite", ({ isWrite, params }) => {
-    console.log(isWrite, params)
-    const user = findUser(params);
+    console.log("sendWrite params", params)
 
+    const user = findUser(params);
     if (user) {
+      updateDateUsers(params)
       io.to(user.room).emit("messageWrite", { data: { user, isWrite } });
     }
   });
