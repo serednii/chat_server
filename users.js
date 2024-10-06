@@ -1,7 +1,5 @@
 const { trimStr } = require("./utils");
 
-
-
 let users = [];  //{ name: 'f', room: '2', time: 1728149544191 }
 
 const findUser = (user) => {
