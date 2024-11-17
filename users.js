@@ -1,16 +1,30 @@
 
 const { trimStr, separateRooms } = require("./utils");
+const { handleRemoveUser } = require("./functionHandle");
 
 const STATUS = {
-  DELETE_USER: 60 * 15,
-  NOT_ACTIVE: 60 * 10,
-  LOW_ACTIVE: 60 * 5,
+  DELETE_USER: 20 * 3,
+  NOT_ACTIVE: 20 * 2,
+  LOW_ACTIVE: 20 * 1,
 };
 
 let users = [];  //{ name: 'f', room: '2', time: 1728149544191 }
 const { getIO } = require('./io');
 
 
+const addUser = (user) => {
+  try {
+    console.log('**********', users)
+    console.log('**********', user)
+    const isExist = findUser(user);
+    !isExist && users.push(user);
+    console.log('******///////////****', users);
+    const currentUser = isExist || user;
+    return { isExist: !!isExist, user: currentUser };
+  } catch (error) {
+    console.log("findUser ", error)
+  }
+};
 
 const sendDataUser = () => {
   const io = getIO();
@@ -18,21 +32,38 @@ const sendDataUser = () => {
   console.log('roomsUsers-----------')
   console.log(roomsUsers)
   console.log('roomsUsers***********')
+
+  //Відправляємо кожну кімнату окремо
   roomsUsers.forEach(roomUsers => {
     console.log(roomUsers)
-    io.to(roomUsers[0].room).emit("messageStatus", {
-      data: { roomUsers },
-    });
+    if (roomUsers) {
+      io.to(roomUsers[0].room).emit("messageStatus", {
+        data: { roomUsers },
+      });
+    }
   })
+
 }
 
+
+const findByIdUser = (id) => {
+  const user = users.find((user => user.userSockedId === id))
+  return
+}
+
+
 const findUser = (user) => {
-  console.log(user)
+  console.log('users **********', users)
+  console.log('user  **********', user)
   try {
+    if (!user) {
+      throw new Error(`user id not defined`)
+    }
     const userName = trimStr(user.name);
     const userRoom = trimStr(user.room);
 
     return users.find(
+
       (u) => trimStr(u.name) === userName && trimStr(u.room) === userRoom
     );
   } catch (error) {
@@ -40,17 +71,7 @@ const findUser = (user) => {
   }
 };
 
-const addUser = (user) => {
-  try {
-    const isExist = findUser(user);
-    !isExist && users.push(user);
-    const currentUser = isExist || user;
-    return { isExist: !!isExist, user: currentUser };
-  } catch (error) {
-    console.log("findUser ", error)
-  }
 
-};
 
 const getRoomUsers = (room) => {
   try {
@@ -94,10 +115,11 @@ const checkTimeUsers = () => {
     console.log(new Date())
     const presentTime = new Date().getTime();
     let isChangeStatus = false;
+
     users = users.map((user) => {
       const deltaTime = (presentTime - user.time) / 1000
       if (deltaTime > STATUS.DELETE_USER) { //1min
-        user.status = "deleteUser"
+        user.status = "deleteUser";
         isChangeStatus = true;
         return user;
       } else if (deltaTime > STATUS.NOT_ACTIVE) { //1min
@@ -113,10 +135,20 @@ const checkTimeUsers = () => {
       }
     })
 
+    // //Видаляємо useera статус якого помічено "deleteUsere" 
+    // users.forEach((user => {
+    //   if (user.status === "deleteUser") {
+    //     removeUser(user)
+    //     handleRemoveUser(user, users);
+    //   }
+    // }))
+
+
     if (isChangeStatus) {
       sendDataUser();
       isChangeStatus = false
     }
+
     console.log(users)
   } catch (error) {
     console.log("checkTimeUsers ", error)
@@ -124,4 +156,4 @@ const checkTimeUsers = () => {
 
 }
 
-module.exports = { addUser, findUser, getRoomUsers, removeUser, updateDateUsers, checkTimeUsers, sendDataUser };
+module.exports = { addUser, findUser, getRoomUsers, removeUser, updateDateUsers, checkTimeUsers, sendDataUser, findByIdUser };
