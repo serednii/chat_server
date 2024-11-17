@@ -8,28 +8,29 @@ const trimStr = (str) => {
 }
 
 //Розбиваємо масиви з users на окремі кімнати
-const separateRooms = (users) => {
-    users.sort((userA, userB) => userA.room.localeCompare(userB.room))
 
-    const roomsUsers = []
+const separateRooms = (users) => {
+    users.sort((userA, userB) => userA.room.localeCompare(userB.room));
+
+    const roomsUsers = [];
     let roomUsers = [];
-    let userRoomCounter = null;
-    users.forEach((user, index) => {
-        if (index === 0) {
-            userRoomCounter = user.room;
-            roomUsers.push(user)
-        }
+    let userRoomCounter = users.length > 0 ? users[0].room : null;
+
+    users.forEach((user) => {
         if (userRoomCounter !== user.room) {
             roomsUsers.push(roomUsers);
-            userRoomCounter = user.room;
             roomUsers = [];
+            userRoomCounter = user.room;
         }
-        roomUsers.push(user)
-    })
-    roomsUsers.push(roomUsers);
-    return roomsUsers;
-}
+        roomUsers.push(user);
+    });
 
-// exports.trimStr = trimStr;
+    if (roomUsers.length > 0) {
+        roomsUsers.push(roomUsers);
+    }
+
+    return roomsUsers;
+};
+
 module.exports = { trimStr, separateRooms };
 
