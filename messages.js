@@ -1,3 +1,4 @@
+import { cloneDeep } from 'lodash';
 const messagesRooms = [
     // {
     //     room: "room1",
@@ -114,7 +115,7 @@ const isRoomInMessagesRooms = (room) => {
 
 const getMessagesRoom = (room) => {
     const messagesRoom = messagesRooms.find((messagesRoom) => messagesRoom.room === room)
-    return structuredClone(messagesRoom);
+    return cloneDeep(messagesRoom);
 }
 
 module.exports = {
