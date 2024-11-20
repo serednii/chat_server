@@ -32,5 +32,12 @@ const separateRooms = (users) => {
     return roomsUsers;
 };
 
-module.exports = { trimStr, separateRooms };
+const generateId = () => {
+    const randomId = `id-${Math.random()
+        .toString(36)
+        .substr(2, 9)}-${Date.now()}`;
+    return randomId
+}
+
+module.exports = { trimStr, separateRooms, generateId };
 
