@@ -169,7 +169,7 @@ module.exports = (io) => {
             }
         });
 
-        socket.on("deleteMessageById", async ({ id, room }) => {
+        socket.on("deleteMessageByIdServer", async ({ id, room }) => {
             console.log('oooooooooooooooooooooooooo');
 
             console.log(id);
@@ -177,14 +177,14 @@ module.exports = (io) => {
             try {
                 const result = await deleteMessageByIdSQL(id);//Удаляємо в базі даних на SQL
                 deleteMessageById(id)//Удаляємо в буфері памяті
-                socket.emit("deleteMessageById", { id });// Отправляем сообщение самому пользователю
-                io.to(room).emit("deleteMessageById", { id }); // Отправляем сообщение в комнату
+                socket.emit("deleteMessageByIdUser", { id });// Отправляем сообщение самому пользователю
+                io.to(room).emit("deleteMessageByIdUser", { id }); // Отправляем сообщение в комнату
             } catch (error) {
                 console.log("deleteMessage ", error);
             }
         });
 
-        socket.on("updateMessageById", async ({ id, room, message }) => {
+        socket.on("updateMessageByIdServer", async ({ id, room, message }) => {
             console.log('oooooooooooooooooooooooooo');
 
             try {
@@ -192,8 +192,8 @@ module.exports = (io) => {
                 updateMessageById(id, message)//Удаляємо в буфері памяті
                 const messagesRoom = getMessagesRoom(room)
                 console.log('messagesRoom', messagesRoom)
-                socket.emit("updateMessageById", { id, message });// Отправляем сообщение самому пользователю
-                io.to(room).emit("updateMessageById", { id, message }); // Отправляем сообщение в комнату
+                socket.emit("updateMessageByIdUser", { id, message });// Отправляем сообщение самому пользователю
+                io.to(room).emit("updateMessageByIdUser", { id, message }); // Отправляем сообщение в комнату
             } catch (error) {
                 console.log("updateMessageById ", error);
             }
