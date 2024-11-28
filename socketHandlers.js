@@ -35,8 +35,7 @@ module.exports = (io) => {
     // Обрабатываем событие подключения нового пользователя
     io.on("connection", (socket) => {
         console.log("User connected", socket.id);
-        console.log('getUsers *************** ', getUsers())
-        console.log('getMessagesRooms *************', getMessagesRooms())
+
         // Обрабатываем событие "join" (присоединение пользователя к комнате)
         socket.on("join", async ({ name, room }) => {
             try {
@@ -44,14 +43,16 @@ module.exports = (io) => {
                 console.log('userSocketId', userSocketId);
                 socket.join(room); // Подключаем пользователя к комнате
                 console.log("join");
-                const newUser = { name, room, userSocketId, time: new Date().getTime(), status: "active" };
+                const newUser = { name, room, userSocketId, date: new Date().getTime() };
                 const { user, isExist } = addUser(newUser); // Добавляем пользователя
+                console.log('room', user.room);
 
                 //Обновляємо статус користувача якщо він проявив активнісь поновляємо дату активності 
                 sendDataUserStatus(user); // Отправляем данные пользователя
                 const userMessage = isExist
                     ? `${user.name}, here you go again`
                     : `Hey my love ${user.name}`;
+
                 //Перевіряємо чи є в масиві кімнат кімната на яку зайшов користувач
                 const isRoom = isRoomInMessagesRooms(room)
                 // let messagesRoomSQL = null
@@ -62,22 +63,44 @@ module.exports = (io) => {
                     addMessagesRoom(messagesRoomSQL, user.room)
                 }
 
-                const messagesRoom = getMessagesRoom(user.room)
-                // console.log('messagesRoom*-*-*-*-*-*-*-*-*-', messagesRoom)
-                const randomId = generateId();
-                const data = {
-                    user: { name: "Admin" },
-                    message: messagesRoom,
-                    messageAdmin: {
-                        message: userMessage,
-                        id: randomId
-                    }
-                }
+                const data = getMessagesRoom(user.room)
+                console.log('XXXXXXXXX', data)
+                const adminMessage = {
+                    author: "Admin",
+                    room,
+                    date: new Date(),
+                    id: generateId(),
+                    message: userMessage,
+                };
+
+                console.log('messagesRoom*-*-*-*-*-*-*-*-*-', data);
+                data.messages.push(adminMessage)
+                // const newMessagesRoom = [...messagesRoom].push(adminMessage);
+
+                // data?.message?.messages?.push(adminMessage);
+
+                // const randomId = generateId();
+                // const data = {
+                //     user: { name: "Admin" },
+                //     message: messagesRoom,
+                //     messageAdmin: {
+                //         message: userMessage,
+                //         id: randomId
+                //     }
+                // }
+
+                // const data = { ...messagesRoom }
+
                 // Отправляем сообщение самому пользователю
-                socket.emit("message", { data });
+                socket.emit("messageStart", { messages: data.messages });
+
                 // // Отправляем сообщение остальным пользователям в комнате про нового usera крім того що передав повідомлення
-                data.messageAdmin.message = `${user.name} has joined`;
-                socket.broadcast.to(user.room).emit("message", { data })
+                // data.messageAdmin.message = `${user.name} has joined`;
+                // adminMessage.message = `${user.name} has joined`
+                adminMessage.message = `${user.name} has joined`
+
+                socket.broadcast.to(user.room).emit("messageAdd", { message: adminMessage });
+
                 //    // Отправляем сообщение самому пользователю
                 //    socket.emit("message", {
                 //     data: { user: { name: "Admin" }, message: userMessage },
@@ -107,8 +130,6 @@ module.exports = (io) => {
                 //     data: { user: { name: "Admin" }, message: `${user.name} has joined` },
                 // });
 
-
-
                 // Отправляем обновленный список пользователей в комнате
                 io.to(user.room).emit("room", {
                     data: { users: getRoomUsers(user.room) },
@@ -127,11 +148,20 @@ module.exports = (io) => {
                 const user = findUser(params);
                 if (user) {
                     const date = new Date()
-                    const insertId = await insertMessageSQL(date, message, params.name, params.room, 0);
+                    const insertId = await insertMessageSQL(date, message, params.name, params.room);
                     addMessageRoom(date, message, params.name, params.room, insertId);
-                    const messagesRoom = getMessagesRoom(params.room)
-                    console.log('insertId***** ****** **** ** **', insertId)
-                    io.to(user.room).emit("message", { data: { user, message: messagesRoom } }); // Отправляем сообщение в комнату
+                    // const messagesRoom = getMessagesRoom(params.room);
+
+                    const messageOut = {
+                        author: params.name,
+                        date,
+                        id: insertId,
+                        message,
+                        room: params.room,
+                    };
+
+                    console.log('insertId***** ****** **** ** **', insertId);
+                    io.to(user.room).emit("messageAdd", { message: messageOut }); // Отправляем сообщение в комнату
                     updateDateUsersStatus(params); // Обновляем данные пользователя
                 }
             } catch (error) {
@@ -173,7 +203,9 @@ module.exports = (io) => {
         // Обрабатываем событие "sendWrite" (уведомление о наборе текста)
         socket.on("sendWrite", ({ isWrite, params }) => {
             try {
-                // console.log("sendWrite params", params);
+                console.log("sendWrite params", params);
+                console.log("sendWrite isWrite", isWrite);
+
                 const user = findUser(params);
                 if (user) {
                     updateDateUsersStatus(params); // Обновляем данные пользователя
@@ -208,10 +240,10 @@ module.exports = (io) => {
         socket.on("disconnect", () => {
             console.log("User disconnected");
             console.log(socket.id);
-            console.log(findByIdUser(socket.id))
+            console.log(findByIdUser(socket.id));
             const user = removeUser(findByIdUser(socket.id));
-            handleRemoveUser(user, getUsers())
-            console.log(user)
+            handleRemoveUser(user, getUsers());
+            console.log(user);
             // if (user) {
             //     const { room, name } = user;
 

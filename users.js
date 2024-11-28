@@ -24,6 +24,7 @@ const addUser = (user) => {
     // console.log('******///////////****', users);
     const currentUser = isExist || user;
     return { isExist: !!isExist, user: currentUser };
+
   } catch (error) {
     console.log("findUser ", error)
   }

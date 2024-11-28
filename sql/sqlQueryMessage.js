@@ -42,13 +42,13 @@ const pool = mysql.createPool({
 //     });
 // };
 
-const insertMessageSQL = async (date, message, author, room, status = 0) => {
-    const query = 'INSERT INTO chat_messages (date, message, author, room, status) VALUES (?, ?, ?, ?, ?)';
-    const values = [date, message, author, room, status];
+const insertMessageSQL = async (date, message, author, room) => {
+    const query = 'INSERT INTO chat_messages (date, message, author, room) VALUES (?, ?, ?, ?)';
+    const values = [date, message, author, room];
 
     try {
         const [results] = await pool.promise().query(query, values);
-        console.log('Message added successfully:', results.insertId);
+        // console.log('Message added successfully:', results.insertId);
         return results.insertId;
     } catch (err) {
         console.error('Error inserting message into database:', err.stack);

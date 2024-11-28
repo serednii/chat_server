@@ -86,12 +86,12 @@ const addMessageRoom = (date, message, user, room, id) => {
         messagesRoom.messages.push(newMessage)
     }
     // console.log('messagesRooms **************** ', messagesRooms[0].messages[0])
-    console.log('messagesRooms addMessageRoom **************** ', messagesRooms[0])
+    // console.log('messagesRooms addMessageRoom **************** ', messagesRooms[0])
 }
 
 //Додаємо повідомлення цілої кімнати до масиву в памяті //при підключенні першого користувача
 const addMessagesRoom = (messages, room) => {
-    console.log('addMessagesRoom room', room)
+    // console.log('addMessagesRoom room', room)
     const messagesRoom = messagesRooms.find((messagesRoom) => messagesRoom.room === room)
 
     if (!messagesRoom) {
