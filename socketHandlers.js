@@ -4,6 +4,8 @@ const {
     getMessagesByRoomSQL,
     deleteMessageByIdSQL,
     updateMessageByIdSQL,
+    getLastMessagesByRoomSQL,
+    getLastMessagesByRoomFromID,
 } = require('./sql/sqlQueryMessage');
 
 // Импортируем функции для работы с пользователями
@@ -59,7 +61,7 @@ module.exports = (io) => {
 
                 //Якщо нема то витягаємо з бази даних SQL і поміщаємо в масив в памяті
                 if (!isRoom) {
-                    const messagesRoomSQL = await getMessagesByRoomSQL(user.room)
+                    const messagesRoomSQL = await getLastMessagesByRoomSQL(user.room, 50)
                     addMessagesRoom(messagesRoomSQL, user.room)
                 }
 
@@ -75,60 +77,14 @@ module.exports = (io) => {
 
                 console.log('messagesRoom*-*-*-*-*-*-*-*-*-', data);
                 data.messages.push(adminMessage)
-                // const newMessagesRoom = [...messagesRoom].push(adminMessage);
-
-                // data?.message?.messages?.push(adminMessage);
-
-                // const randomId = generateId();
-                // const data = {
-                //     user: { name: "Admin" },
-                //     message: messagesRoom,
-                //     messageAdmin: {
-                //         message: userMessage,
-                //         id: randomId
-                //     }
-                // }
-
-                // const data = { ...messagesRoom }
 
                 // Отправляем сообщение самому пользователю
                 socket.emit("messageStart", { messages: data.messages });
 
-                // // Отправляем сообщение остальным пользователям в комнате про нового usera крім того що передав повідомлення
-                // data.messageAdmin.message = `${user.name} has joined`;
-                // adminMessage.message = `${user.name} has joined`
+                // Отправляем сообщение остальным пользователям в комнате про нового usera крім того що передав повідомлення
                 adminMessage.message = `${user.name} has joined`
 
                 socket.broadcast.to(user.room).emit("messageAdd", { message: adminMessage });
-
-                //    // Отправляем сообщение самому пользователю
-                //    socket.emit("message", {
-                //     data: { user: { name: "Admin" }, message: userMessage },
-                // });
-
-                // // Отправляем сообщение остальным пользователям в комнате про нового usera
-                // socket.broadcast.to(user.room).emit("message", {
-                //     data: { user: { name: "Admin" }, message: `${user.name} has joined` },
-                // });
-
-                //Відправка повідомлення окремому користувачу
-                // const socketId = findUserByName('q')
-                // if (socketId) {
-                //     io.to(socketId.userSocketId).emit('privateMessage', { data: "HELLO PRIVATE MESSAGE" });
-                // }
-                // else {
-                //     console.log('User not connected or does not exist.');
-                // }
-
-                // // Отправляем сообщение самому пользователю
-                // socket.emit("message", {
-                //     data: { user: { name: "Admin" }, message: userMessage },
-                // });
-
-                // // Отправляем сообщение остальным пользователям в комнате про нового usera
-                // socket.broadcast.to(user.room).emit("message", {
-                //     data: { user: { name: "Admin" }, message: `${user.name} has joined` },
-                // });
 
                 // Отправляем обновленный список пользователей в комнате
                 io.to(user.room).emit("room", {
@@ -183,6 +139,27 @@ module.exports = (io) => {
                 console.log("deleteMessage ", error);
             }
         });
+
+        socket.on("getPrevMessagesServer", async ({ room, startID, limit }) => {
+            console.log('NNNNNNNNNNNNNNNNNNNNNNN');
+
+            console.log(startID);
+            console.log(room);
+            console.log(limit);
+
+            try {
+                const messages = await getLastMessagesByRoomFromID(room, startID, limit);//Удаляємо в базі даних на SQL
+                console.log('getLastMessagesServer nnnnnnnnnnnnnnnnn', messages)
+                // Отправляем сообщение самому пользователю
+                socket.emit("prevMessagesUser", messages);
+            } catch (error) {
+                console.log("getPrevMessagesByRoomFromID ", error);
+            }
+        });
+
+
+
+
 
         socket.on("updateMessageByIdServer", async ({ id, room, message }) => {
             console.log('oooooooooooooooooooooooooo');

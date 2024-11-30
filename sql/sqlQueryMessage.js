@@ -72,6 +72,33 @@ const getMessagesByRoomSQL = async (room, callback) => {
 
 };
 
+
+const getLastMessagesByRoomSQL = async (room, limit) => {
+    const query = 'SELECT * FROM chat_messages WHERE room = ? ORDER BY date DESC LIMIT ?';
+    const values = [room, limit];
+    try {
+        const [results] = await pool.promise().query(query, values);
+        // Повертаємо повідомлення в порядку від найстарішого до найновішого
+        return results.reverse();
+    } catch (err) {
+        console.error('Error retrieving messages from database:', err.stack);
+        throw err;  // Розповсюджуємо помилку, щоб її можна було обробити вище
+    }
+};
+
+const getLastMessagesByRoomFromID = async (room, startID, limit) => {
+    const query = 'SELECT * FROM chat_messages WHERE room = ? AND id < ? ORDER BY date DESC LIMIT ?';
+    const values = [room, startID, limit];
+    try {
+        const [results] = await pool.promise().query(query, values);
+        // Повертаємо повідомлення в порядку від найстарішого до найновішого
+        return results.reverse();
+    } catch (err) {
+        console.error('Error retrieving messages from database:', err.stack);
+        throw err;  // Розповсюджуємо помилку, щоб її можна було обробити вище
+    }
+};
+
 // Функція для видалення повідомлення за id
 const deleteMessageByIdSQL = async (id) => {
     const checkQuery = 'SELECT * FROM chat_messages WHERE id = ?';
@@ -122,7 +149,7 @@ const updateMessageByIdSQL = async (id, newContent) => {
 };
 
 
-module.exports = { insertMessageSQL, getMessagesByRoomSQL, deleteMessageByIdSQL, updateMessageByIdSQL };
+module.exports = { insertMessageSQL, getMessagesByRoomSQL, deleteMessageByIdSQL, updateMessageByIdSQL, getLastMessagesByRoomSQL, getLastMessagesByRoomFromID };
 // CREATE TABLE messages (
 //     id INT AUTO_INCREMENT PRIMARY KEY,
 //     date TEXT NOT NULL,
