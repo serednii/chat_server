@@ -41,6 +41,48 @@ const pool = mysql.createPool({
 //         return results.ResultSetHeader;
 //     });
 // };
+const getFirstMessageByUserAndRoomSQL = async (userName, roomName) => {
+    const query = 'SELECT * FROM chat_messages WHERE author = ? AND room = ? ORDER BY date ASC LIMIT 1';
+    const values = [userName, roomName];
+
+    try {
+        const [results] = await pool.promise().query(query, values);
+        return results[0];  // Повертаємо перше повідомлення
+    } catch (err) {
+        console.error('Error retrieving first message from database:', err.stack);
+        throw err;  // Розповсюджуємо помилку, щоб її можна було обробити вище
+    }
+};
+
+const getFirstMessageByRoomSQL = async (roomName) => {
+    const query = 'SELECT * FROM chat_messages WHERE room = ? ORDER BY date ASC LIMIT 1';
+    const values = [roomName];
+
+    try {
+        const [results] = await pool.promise().query(query, values);
+        return results[0];  // Повертаємо останнє повідомлення
+    } catch (err) {
+        console.error('Error retrieving first message from database:', err.stack);
+        throw err;  // Розповсюджуємо помилку, щоб її можна було обробити вище
+    }
+};
+const getLastMessageByRoomSQL = async (roomName) => {
+    const query = 'SELECT * FROM chat_messages WHERE room = ? ORDER BY date DESC LIMIT 1';
+    const values = [roomName];
+
+    try {
+        const [results] = await pool.promise().query(query, values);
+        return results[0];  // Повертаємо перше повідомлення
+    } catch (err) {
+        console.error('Error retrieving first message from database:', err.stack);
+        throw err;  // Розповсюджуємо помилку, щоб її можна було обробити вище
+    }
+};
+
+
+
+
+
 
 const insertMessageSQL = async (date, message, author, room) => {
     const query = 'INSERT INTO chat_messages (date, message, author, room) VALUES (?, ?, ?, ?)';
@@ -86,7 +128,23 @@ const getLastMessagesByRoomSQL = async (room, limit) => {
     }
 };
 
-const getLastMessagesByRoomFromID = async (room, startID, limit) => {
+const getNextMessagesByRoomFromIdSQL = async (room, startID, limit) => {
+    console.log('SSSSSS', room, startID, limit);
+    const query = 'SELECT * FROM chat_messages WHERE room = ? AND id >= ? ORDER BY date ASC LIMIT ?';
+    const values = [room, startID, limit];
+    try {
+        const [results] = await pool.promise().query(query, values);
+        // Повертаємо повідомлення в порядку від найстарішого до найновішого
+        return results;
+    } catch (err) {
+        console.error('Error retrieving messages from database:', err.stack);
+        throw err;  // Розповсюджуємо помилку, щоб її можна було обробити вище
+    }
+};
+
+
+const getPrevMessagesByRoomFromIdSQL = async (room, startID, limit) => {
+    console.log('SSSSSSLLLLLLL', room, startID, limit)
     const query = 'SELECT * FROM chat_messages WHERE room = ? AND id < ? ORDER BY date DESC LIMIT ?';
     const values = [room, startID, limit];
     try {
@@ -98,6 +156,8 @@ const getLastMessagesByRoomFromID = async (room, startID, limit) => {
         throw err;  // Розповсюджуємо помилку, щоб її можна було обробити вище
     }
 };
+
+
 
 // Функція для видалення повідомлення за id
 const deleteMessageByIdSQL = async (id) => {
@@ -148,8 +208,113 @@ const updateMessageByIdSQL = async (id, newContent) => {
     }
 };
 
+const insertRecordLastIdMessageSQL = async (userName, roomName, lastViewedMessageId) => {
+    const query = `
+        INSERT INTO chat_user_room_last_views_message (user_name, room_name, last_viewed_message_id) 
+        VALUES (?, ?, ?)
+        ON DUPLICATE KEY UPDATE 
+        last_viewed_message_id = VALUES(last_viewed_message_id)
+    `;
+    const values = [userName, roomName, lastViewedMessageId];
 
-module.exports = { insertMessageSQL, getMessagesByRoomSQL, deleteMessageByIdSQL, updateMessageByIdSQL, getLastMessagesByRoomSQL, getLastMessagesByRoomFromID };
+    try {
+        const [result] = await pool.promise().query(query, values);
+        return result;
+    } catch (err) {
+        console.error('Error inserting or updating record in the database:', err.stack);
+        throw err;
+    }
+};
+
+const updateRecordLastIdMessageSQL = async (userName, roomName, lastViewedMessageId) => {
+    const checkQuery = 'SELECT * FROM chat_user_room_last_views_message WHERE user_name = ? AND room_name = ?';
+    const updateQuery = `
+        UPDATE chat_user_room_last_views_message
+        SET last_viewed_message_id = ?
+        WHERE user_name = ? AND room_name = ?
+    `;
+    const insertQuery = `
+        INSERT INTO chat_user_room_last_views_message (user_name, room_name, last_viewed_message_id)
+        VALUES (?, ?, ?)
+    `;
+    const checkValues = [userName, roomName];
+    const updateValues = [lastViewedMessageId, userName, roomName];
+    const insertValues = [userName, roomName, lastViewedMessageId];
+
+    try {
+        const [checkResults] = await pool.promise().query(checkQuery, checkValues);
+
+        if (checkResults.length > 0) {
+            // Запис існує, оновлюємо його
+            const [updateResults] = await pool.promise().query(updateQuery, updateValues);
+            return updateResults;
+        } else {
+            // Запису не існує, вставляємо новий
+            const [insertResults] = await pool.promise().query(insertQuery, insertValues);
+            return insertResults;
+        }
+    } catch (err) {
+        console.error('Error updating or inserting record in the database:', err.stack);
+        throw err;
+    }
+};
+
+
+
+const readRecordFirstIdMessageSQL = async (userName, roomName) => {
+    const query = 'SELECT * FROM chat_user_room_last_views_message WHERE user_name = ? AND room_name = ?';
+    const values = [userName, roomName];
+
+    try {
+        const [rows] = await pool.promise().query(query, values);
+        return rows;
+    } catch (err) {
+        console.error('Error reading record from database:', err.stack);
+        throw err;
+    }
+};
+
+const recordExistsLastIdMessageSQL = async (userName, roomName) => {
+    const query = 'SELECT 1 FROM chat_user_room_last_views_message WHERE user_name = ? AND room_name = ?';
+    const values = [userName, roomName];
+
+    try {
+        const [rows] = await pool.promise().query(query, values);
+        return rows.length > 0;
+    } catch (err) {
+        console.error('Error checking record in database:', err.stack);
+        throw err;
+    }
+};
+
+
+
+
+// CREATE TABLE chat_user_room_last_views_message(
+//     id INT PRIMARY KEY AUTO_INCREMENT,
+//     user_name VARCHAR(255),
+//     room_name VARCHAR(255),
+//     last_viewed_message_id INT
+// );
+
+
+
+module.exports = {
+    getPrevMessagesByRoomFromIdSQL,
+    readRecordFirstIdMessageSQL,
+    getNextMessagesByRoomFromIdSQL,
+    getFirstMessageByUserAndRoomSQL,
+    getFirstMessageByRoomSQL,
+    getLastMessageByRoomSQL,
+    updateRecordLastIdMessageSQL,
+    insertRecordLastIdMessageSQL,
+    recordExistsLastIdMessageSQL,
+    insertMessageSQL,
+    getMessagesByRoomSQL,
+    deleteMessageByIdSQL,
+    updateMessageByIdSQL,
+    getLastMessagesByRoomSQL,
+};
 // CREATE TABLE messages (
 //     id INT AUTO_INCREMENT PRIMARY KEY,
 //     date TEXT NOT NULL,
@@ -157,6 +322,14 @@ module.exports = { insertMessageSQL, getMessagesByRoomSQL, deleteMessageByIdSQL,
 //     author VARCHAR(50),
 //     room VARCHAR(50),
 //     status INT DEFAULT 0
+// );
+
+
+// CREATE TABLE user_room_views (
+//     id INT PRIMARY KEY AUTO_INCREMENT,
+//     user_id INT,
+//     room_name VARCHAR(255),
+//     last_viewed_message_id INT
 // );
 
 
