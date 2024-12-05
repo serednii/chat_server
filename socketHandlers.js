@@ -3,11 +3,7 @@ const {
     insertMessageSQL,
     deleteMessageByIdSQL,
     updateMessageByIdSQL,
-    getLastMessagesByRoomSQL,
     recordExistsLastIdMessageSQL,
-    getFirstMessageByUserAndRoomSQL,
-    getLastMessagesByRoomFromIdSQL,
-    readRecordLastIdMessageSQL,
     insertRecordLastIdMessageSQL,
     updateRecordLastIdMessageSQL,
     getFirstMessageByRoomSQL,
@@ -30,12 +26,9 @@ const {
 } = require("./users");
 
 const {
-    updateMessageById,
     deleteMessageById,
     addMessageRoom,
-    addMessagesRoom,
     getMessagesRoom,
-    isRoomInMessagesRooms
 } = require('./messages');
 
 const { handleRemoveUser } = require("./functionHandle");
