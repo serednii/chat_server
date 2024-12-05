@@ -81,7 +81,7 @@ module.exports = (io) => {
                 const firstMessageId = await getFirstMessageByRoomSQL(room)
                 const lastMessageId = await getLastMessageByRoomSQL(room)
                 const data = {
-                    viewMessageId: startIdMessage.last_viewed_message_id,
+                    viewMessageId: startIdMessage[0]?.last_viewed_message_id,
                     firstMessageId: firstMessageId.id,
                     lastMessageId: lastMessageId.id
                 }
@@ -202,10 +202,10 @@ module.exports = (io) => {
                 console.log('getLastMessagesServer nnnnnnnnnnnnnnnnn', messages)
                 // Отправляем сообщение самому пользователю
                 const startIdMessage = await readRecordFirstIdMessageSQL(name, room);//return 	last_viewed_message_id
-                const firstMessageId = await getFirstMessageByRoomSQL(params.room)
-                const lastMessageId = await getLastMessageByRoomSQL(params.room)
+                const firstMessageId = await getFirstMessageByRoomSQL(room)
+                const lastMessageId = await getLastMessageByRoomSQL(room)
                 const data = {
-                    viewMessageId: startIdMessage.last_viewed_message_id,
+                    viewMessageId: startIdMessage[0].last_viewed_message_id,
                     firstMessageId: firstMessageId.id,
                     lastMessageId: lastMessageId.id
                 }
@@ -224,13 +224,13 @@ module.exports = (io) => {
 
             try {
                 const messages = await getNextMessagesByRoomFromIdSQL(room, startID, limit);//Удаляємо в базі даних на SQL
-                // console.log('getLastMessagesServer nnnnnnnnnnnnnnnnn', messages)
+                console.log('getLastMessagesServer nnnnnnnnnnnnnnnnn')
                 // Отправляем сообщение самому пользователю
                 const startIdMessage = await readRecordFirstIdMessageSQL(name, room);//return 	last_viewed_message_id
                 const firstMessageId = await getFirstMessageByRoomSQL(room)
                 const lastMessageId = await getLastMessageByRoomSQL(room)
                 const data = {
-                    viewMessageId: startIdMessage.last_viewed_message_id,
+                    viewMessageId: startIdMessage[0].last_viewed_message_id,
                     firstMessageId: firstMessageId.id,
                     lastMessageId: lastMessageId.id
                 }

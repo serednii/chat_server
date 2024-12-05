@@ -97,6 +97,11 @@ const insertMessageSQL = async (date, message, author, room) => {
         throw err;  // Розповсюджуємо помилку, щоб її можна було обробити вище
     }
 };
+// INSERT INTO chat_messages(date, message, author, room) VALUES(?, ?, ?, ?)'
+// згенерувати sql запити для вставки в базу даних 500шт 
+// Назва room "test"
+// author будуть різні "Mykola", "Michal""Oleg" і інші
+// по 10 - 15 повідомлень користувачів в день в чаті
 
 
 // Функція для вибірки повідомлень за кімнатою
