@@ -1,3 +1,5 @@
+
+"use strict"
 // socketHandlers.js
 const {
     insertMessageSQL,
@@ -9,10 +11,10 @@ const {
     getFirstMessageByRoomSQL,
     getNextMessagesByRoomFromIdSQL,
     getPrevMessagesByRoomFromIdSQL,
-    readRecordFirstIdMessageSQL,
-    getLastMessageByRoomSQL,
+    getMessagesInfoByRoomSQL,
+    updateLastViewedMessageId,
 } = require('./sql/sqlQueryMessage');
-
+``
 // Импортируем функции для работы с пользователями
 const {
     getUsers,
@@ -70,29 +72,36 @@ module.exports = (io) => {
                 const res = await recordExistsLastIdMessageSQL(name, room);
                 console.log('HHHHHHHH', res, name, room)
                 let messages, startIdMessage;
-                startIdMessage = await readRecordFirstIdMessageSQL(name, room);//return 	last_viewed_message_id
-                const firstMessageId = await getFirstMessageByRoomSQL(room)
-                const lastMessageId = await getLastMessageByRoomSQL(room)
-                const data = {
-                    viewMessageId: startIdMessage[0]?.last_viewed_message_id,
-                    firstMessageId: firstMessageId.id,
-                    lastMessageId: lastMessageId.id
-                }
+                // const { lastMessageId } = data
+                // let prevLimit = limit - (lastMessageId - startID)
+                // let firstMessages = [];
+                // let messages = [];
+                // if (prevLimit > 0 && prevLimit <= limit) {
+                //     firstMessages = await getPrevMessagesByRoomFromIdSQL(room, startID, prevLimit);
+                //     messages = await getNextMessagesByRoomFromIdSQL(room, startID + 1, limit - prevLimit);
+                // } else {
+                //     messages = await getNextMessagesByRoomFromIdSQL(room, startID, limit);
+                // }
+                // messages = [...firstMessages, ...messages];
+
+
+                const data = await getMessagesInfoByRoomSQL(name, room)
+
+                const { lastMessageId, viewMessageId } = data
+
                 if (res) {
                     //Якщо повідомлення є то беремо останнє прочитане повідомлення
+                    let startLimit = 50 - (lastMessageId - viewMessageId)
+                    console.log('startLimit', lastMessageId, viewMessageId, startLimit)
+                    let firstMessages = [];
 
-
-
-                    let startLimit = 50 - (lastMessageId.id - startIdMessage[0].last_viewed_message_id)
-                    console.log('startLimit', lastMessageId.id, startIdMessage[0].last_viewed_message_id, startLimit)
-                    let firstMessages = []
                     if (startLimit > 0 && 50 >= startLimit) {
-                        firstMessages = await getPrevMessagesByRoomFromIdSQL(room, startIdMessage[0].last_viewed_message_id, startLimit);
+                        firstMessages = await getPrevMessagesByRoomFromIdSQL(room, viewMessageId, startLimit);
                     }
-                    // if(lastMessageId.id)
-                    messages = await getNextMessagesByRoomFromIdSQL(room, startIdMessage[0].last_viewed_message_id, 50);
-                    messages = [...firstMessages, ...messages];
 
+                    // if(lastMessageId.id)
+                    messages = await getNextMessagesByRoomFromIdSQL(room, viewMessageId, 50);
+                    messages = [...firstMessages, ...messages];
                     // await updateRecordLastIdMessageSQL(name, room, startIdMessage.id)
                     console.log('PPPPPPPP', startIdMessage)
                 } else {
@@ -121,7 +130,7 @@ module.exports = (io) => {
                 // Отправляем сообщение остальным пользователям в комнате про нового usera крім того що передав повідомлення
                 adminMessage.message = `${user.name} has joined`
 
-                socket.broadcast.to(user.room).emit("messageAdd", { message: adminMessage });
+                socket.broadcast.to(user.room).emit("messageAdd", { message: adminMessage, data });
 
                 // Отправляем обновленный список пользователей в комнате
                 io.to(user.room).emit("room", {
@@ -143,6 +152,8 @@ module.exports = (io) => {
                     const date = new Date()
                     const insertId = await insertMessageSQL(date, message, params.name, params.room);
                     addMessageRoom(date, message, params.name, params.room, insertId);//-----------
+
+                    //відправляємо повідомлення 
                     // const messagesRoom = getMessagesRoom(params.room);
 
                     const messageOut = {
@@ -152,14 +163,9 @@ module.exports = (io) => {
                         message,
                         room: params.room,
                     };
-                    const startIdMessage = await readRecordFirstIdMessageSQL(params.name, params.room);//return 	last_viewed_message_id
-                    const firstMessageId = await getFirstMessageByRoomSQL(params.room)
-                    const lastMessageId = await getLastMessageByRoomSQL(params.room)
-                    const data = {
-                        viewMessageId: startIdMessage.last_viewed_message_id,
-                        firstMessageId: firstMessageId.id,
-                        lastMessageId: lastMessageId.id
-                    }
+
+                    const data = await getMessagesInfoByRoomSQL(params.name, params.room)
+                    console.log('RRRRRRRR', data)
                     console.log('insertId***** ****** **** ** **', insertId);
                     io.to(user.room).emit("messageAdd", { message: messageOut, data }); // Отправляем сообщение в комнату
                     updateDateUsersStatus(params); // Обновляем данные пользователя
@@ -185,23 +191,12 @@ module.exports = (io) => {
         });
 
         socket.on("getPrevMessagesServer", async ({ name, room, startID, limit }) => {
-            console.log('NNNNNNNNNNNNNNNNNNNNNNN');
-            console.log(startID);
-            console.log(room);
-            console.log(limit);
-
+            console.log('NNNNNNNNNNNNNNNNNNNNNNN', name, room, startID, limit);
             try {
                 const messages = await getPrevMessagesByRoomFromIdSQL(room, startID, limit);//Удаляємо в базі даних на SQL
                 console.log('getLastMessagesServer nnnnnnnnnnnnnnnnn', messages)
                 // Отправляем сообщение самому пользователю
-                const startIdMessage = await readRecordFirstIdMessageSQL(name, room);//return 	last_viewed_message_id
-                const firstMessageId = await getFirstMessageByRoomSQL(room)
-                const lastMessageId = await getLastMessageByRoomSQL(room)
-                const data = {
-                    viewMessageId: startIdMessage[0].last_viewed_message_id,
-                    firstMessageId: firstMessageId.id,
-                    lastMessageId: lastMessageId.id
-                }
+                const data = await getMessagesInfoByRoomSQL(name, room)
                 socket.emit("prevMessagesUser", { messages, data });
             } catch (error) {
                 console.log("getPrevMessagesByRoomFromID ", error);
@@ -210,36 +205,47 @@ module.exports = (io) => {
         });
 
         socket.on("getNextMessagesServer", async ({ name, room, startID, limit }) => {
-            console.log('TTTTTTTTTTTTTTTTTTTTTT');
-            console.log(startID);
-            console.log(room);
-            console.log(limit);
-
+            console.log('TTTTTTTTTTTTTTTTTTTTTT', name, room, startID, limit);
             try {
-                const messages = await getNextMessagesByRoomFromIdSQL(room, startID, limit);//Удаляємо в базі даних на SQL
-                console.log('getLastMessagesServer nnnnnnnnnnnnnnnnn')
                 // Отправляем сообщение самому пользователю
-                const startIdMessage = await readRecordFirstIdMessageSQL(name, room);//return 	last_viewed_message_id
-                const firstMessageId = await getFirstMessageByRoomSQL(room)
-                const lastMessageId = await getLastMessageByRoomSQL(room)
-                const data = {
-                    viewMessageId: startIdMessage[0].last_viewed_message_id,
-                    firstMessageId: firstMessageId.id,
-                    lastMessageId: lastMessageId.id
-                }
+                const data = await getMessagesInfoByRoomSQL(name, room);
+                const messages = await getNextMessagesByRoomFromIdSQL(room, startID, limit);
+                // const messages = await getNextMessagesByRoomFromIdSQL(room, startID, limit);//
                 socket.emit("nextMessagesUser", { messages, data });
             } catch (error) {
                 console.log("getPrevMessagesByRoomFromID ", error);
             }
+        });
+
+        socket.on("getNextPrevMessagesServer", async ({ name, room, startID, limit }) => {
+            console.log('TTTTTTTTTTTTTTTTTTTTTT', name, room, startID, limit);
+
+            try {
+                // Отправляем сообщение самому пользователю
+                const data = await getMessagesInfoByRoomSQL(name, room);
+                const { lastMessageId } = data
+                let prevLimit = limit - (lastMessageId - startID)
+                let firstMessages = [];
+                let messages = [];
+                if (prevLimit > 0 && prevLimit <= limit) {
+                    firstMessages = await getPrevMessagesByRoomFromIdSQL(room, startID, prevLimit);
+                    messages = await getNextMessagesByRoomFromIdSQL(room, startID + 1, limit - prevLimit);
+                } else {
+                    messages = await getNextMessagesByRoomFromIdSQL(room, startID, limit);
+                }
+                messages = [...firstMessages, ...messages];
+                socket.emit("nextPrevMessagesUser", { messages, data });
+            } catch (error) {
+                console.log("nextPrevMessagesUser ", error);
+            }
 
         });
 
-
+        //Обновляємо повідомлення яке ми змінили 
         socket.on("updateMessageByIdServer", async ({ id, room, message }) => {
             console.log('oooooooooooooooooooooooooo');
-
             try {
-                const result = await updateMessageByIdSQL(id, message);//Удаляємо в базі даних на SQL
+                await updateMessageByIdSQL(id, message);//
                 // updateMessageById(id, message)//Удаляємо в буфері памяті-------
                 const messagesRoom = getMessagesRoom(room)
                 console.log('messagesRoom', messagesRoom)
@@ -250,10 +256,16 @@ module.exports = (io) => {
             }
         });
 
-        socket.on("updateLastIdViewMessageServer", ({ user, room, id }) => {
+        //получаємо дані про перший і останній id а також переглянутий id і непрочитанні повідомлення
+        socket.on("updateLastIdViewMessageServer", async ({ user, room, id }) => {
             console.log('AAAAAAAAAAAAAAAAAAAAAAAAAA', user, room, id);
             try {
-                updateRecordLastIdMessageSQL(user, room, id);//обновляємо id 
+
+                await updateRecordLastIdMessageSQL(user, room, id);//обновляємо id 
+                const data = await getMessagesInfoByRoomSQL(user, room)
+                console.log('RRRRRRRR', data)
+
+                socket.emit("updateDataIdUser", data);// Отправляем сообщение самому пользователю
             } catch (error) {
                 console.log("updateMessageById ", error);
             }
@@ -275,6 +287,10 @@ module.exports = (io) => {
                 console.log("sendWrite ", error);
             }
         });
+
+
+
+
 
         // Обрабатываем событие "leftRoom" (пользователь покинул комнату)
         socket.on("leftRoom", ({ params, }) => {
@@ -304,21 +320,25 @@ module.exports = (io) => {
             const user = removeUser(findByIdUser(socket.id));
             handleRemoveUser(user, getUsers());
             console.log(user);
-            // if (user) {
-            //     const { room, name } = user;
-
-            //     // Отправляем сообщение о выходе пользователя из комнаты
-            //     io.to(room).emit("message", {
-            //         data: { user: { name: "Admin" }, message: `${name} has left` },
-            //     });
-
-            //     // Отправляем обновленный список пользователей в комнате
-            //     io.to(room).emit("room", {
-            //         data: { users: getRoomUsers(room) },
-            //     });
-
-            // }
         });
+
+
+
+
+        ///Для тестів
+        // Обрабатываем событие "sendWrite" (уведомление о наборе текста)
+        socket.on("sendStartNum", async ({ name, room, startID }) => {
+            console.log('TTTTTTTTTTTTTTTTTTTTTT', name, room, startID);
+
+            try {
+                updateLastViewedMessageId(name, room, startID)
+
+            } catch (error) {
+                console.log("sendWrite ", error);
+            }
+        });
+
+
     });
 };
 
