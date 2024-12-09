@@ -136,7 +136,8 @@ const getLastMessagesByRoomSQL = async (room, limit) => {
 const getNextMessagesByRoomFromIdSQL = async (room, startID, limit) => {
     console.log('SSSSSS', room, startID, limit);
     const query = 'SELECT * FROM chat_messages WHERE room = ? AND id >= ? ORDER BY date ASC LIMIT ?';
-    const values = [room, startID, limit];
+    const values = [room, startID, parseInt(limit, 10)]; // Переконайтеся, що `limit` є числовим значенням
+
     try {
         const [results] = await pool.promise().query(query, values);
         // Повертаємо повідомлення в порядку від найстарішого до найновішого
@@ -147,10 +148,9 @@ const getNextMessagesByRoomFromIdSQL = async (room, startID, limit) => {
     }
 };
 
-
 const getPrevMessagesByRoomFromIdSQL = async (room, startID, limit) => {
     console.log('SSSSSSLLLLLLL', room, startID, limit)
-    const query = 'SELECT * FROM chat_messages WHERE room = ? AND id < ? ORDER BY date DESC LIMIT ?';
+    const query = 'SELECT * FROM chat_messages WHERE room = ? AND id <= ? ORDER BY date DESC LIMIT ?';
     const values = [room, startID, limit];
     try {
         const [results] = await pool.promise().query(query, values);
@@ -265,8 +265,8 @@ const updateRecordLastIdMessageSQL = async (userName, roomName, lastViewedMessag
 };
 
 
-
 const readRecordFirstIdMessageSQL = async (userName, roomName) => {
+
     const query = 'SELECT * FROM chat_user_room_last_views_message WHERE user_name = ? AND room_name = ?';
     const values = [userName, roomName];
 
@@ -291,6 +291,78 @@ const recordExistsLastIdMessageSQL = async (userName, roomName) => {
         throw err;
     }
 };
+
+
+
+const getMessagesInfoByRoomSQL = async (userName, roomName) => {
+    const query = `
+      SELECT
+        (SELECT last_viewed_message_id
+         FROM chat_user_room_last_views_message
+         WHERE user_name = ? AND room_name = ?) AS last_viewed,
+        (SELECT id
+         FROM chat_messages
+         WHERE room = ?
+         ORDER BY date ASC LIMIT 1) AS first_message,
+        (SELECT id
+         FROM chat_messages
+         WHERE room = ?
+         ORDER BY date DESC LIMIT 1) AS last_message,
+        (SELECT COUNT(*)
+         FROM chat_messages
+         WHERE room = ?
+         AND id > (
+           SELECT last_viewed_message_id
+           FROM chat_user_room_last_views_message
+           WHERE user_name = ? AND room_name = ?
+         )) AS unreadMessages
+    `;
+    const values = [userName, roomName, roomName, roomName, roomName, userName, roomName];
+
+    try {
+        const [results] = await pool.promise().query(query, values);
+        const resultData = {
+            viewMessageId: Math.min(results[0].last_viewed, results[0].last_message),
+            firstMessageId: results[0].first_message,
+            lastMessageId: results[0].last_message,
+            unreadMessagesCount: results[0].unreadMessages
+        };
+        return resultData;
+    } catch (err) {
+        console.error('Error retrieving messages info from database:', err.stack);
+        throw err;
+    }
+};
+
+
+//для тестів
+const updateLastViewedMessageId = async (userName, roomName, lastViewedMessageId) => {
+    const query = `
+      UPDATE chat_user_room_last_views_message 
+      SET last_viewed_message_id = ?
+      WHERE user_name = ? AND room_name = ?
+    `;
+    const values = [lastViewedMessageId, userName, roomName];
+
+    try {
+        const [result] = await pool.promise().query(query, values);
+        return result;
+    } catch (err) {
+        console.error('Error updating record in the database:', err.stack);
+        throw err;
+    }
+};
+
+
+
+
+//необхідно  прочитати last_viewed_message_id і взнати скільки є повідомлень від last_viewed_message_id до останнього id chat_messages для певної кімнати перероби getCounterNotViewMessage
+
+
+
+
+
+
 
 
 
@@ -319,6 +391,10 @@ module.exports = {
     deleteMessageByIdSQL,
     updateMessageByIdSQL,
     getLastMessagesByRoomSQL,
+    getMessagesInfoByRoomSQL,
+
+
+    updateLastViewedMessageId
 };
 // CREATE TABLE messages (
 //     id INT AUTO_INCREMENT PRIMARY KEY,
