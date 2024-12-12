@@ -84,11 +84,10 @@ module.exports = (io) => {
                 // }
                 // messages = [...firstMessages, ...messages];
 
-
                 const data = await getMessagesInfoByRoomSQL(name, room)
 
                 let { lastMessageId, viewMessageId } = data
-                viewMessageId = lastMessageId
+
 
                 if (res) {
                     //Якщо повідомлення є то беремо останнє прочитане повідомлення
