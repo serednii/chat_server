@@ -14,6 +14,7 @@ const {
     getMessagesInfoByRoomSQL,
     updateLastViewedMessageId,
     getUsersByRoom,
+    getUserLastVisitDates,
 } = require('./sql/sqlQueryMessage');
 ``
 // Импортируем функции для работы с пользователями
@@ -74,10 +75,10 @@ module.exports = (io) => {
 
                 let messages, startIdMessage;
 
+                const UserLastVisitDates = await getUserLastVisitDates(room)
                 const data = await getMessagesInfoByRoomSQL(name, room)
-
+                data.UserLastVisitDates = UserLastVisitDates
                 let { lastMessageId, viewMessageId } = data
-
 
                 if (res) {
                     //Якщо повідомлення є то беремо останнє прочитане повідомлення
@@ -151,7 +152,11 @@ module.exports = (io) => {
                         room: params.room,
                     };
 
+                    const UserLastVisitDates = await getUserLastVisitDates(params.room)
                     const data = await getMessagesInfoByRoomSQL(params.name, params.room)
+                    data.UserLastVisitDates = UserLastVisitDates
+
+                    // const data = await getMessagesInfoByRoomSQL(params.name, params.room)
                     io.to(user.room).emit("messageAdd", { message: messageOut, data }); // Отправляем сообщение в комнату
                     updateDateUsersStatus(params); // Обновляем данные пользователя
                 }
@@ -177,7 +182,10 @@ module.exports = (io) => {
             try {
                 const messages = await getPrevMessagesByRoomFromIdSQL(room, startID, limit);//Удаляємо в базі даних на SQL
                 // Отправляем сообщение самому пользователю
+                const UserLastVisitDates = await getUserLastVisitDates(room)
                 const data = await getMessagesInfoByRoomSQL(name, room)
+                data.UserLastVisitDates = UserLastVisitDates
+                // const data = await getMessagesInfoByRoomSQL(name, room)
                 socket.emit("prevMessagesUser", { messages, data });
             } catch (error) {
                 console.log("getPrevMessagesByRoomFromID ", error);
@@ -189,7 +197,11 @@ module.exports = (io) => {
             console.log('TTTTTTTTTTTTTTTTTTTTTT', name, room, startID, limit);
             try {
                 // Отправляем сообщение самому пользователю
-                const data = await getMessagesInfoByRoomSQL(name, room);
+                const UserLastVisitDates = await getUserLastVisitDates(room)
+                const data = await getMessagesInfoByRoomSQL(name, room)
+                data.UserLastVisitDates = UserLastVisitDates
+
+                // const data = await getMessagesInfoByRoomSQL(name, room);
                 const messages = await getNextMessagesByRoomFromIdSQL(room, startID, limit);
                 socket.emit("nextMessagesUser", { messages, data });
             } catch (error) {
@@ -201,7 +213,11 @@ module.exports = (io) => {
 
             try {
                 // Отправляем сообщение самому пользователю
-                const data = await getMessagesInfoByRoomSQL(name, room);
+                const UserLastVisitDates = await getUserLastVisitDates(room)
+                const data = await getMessagesInfoByRoomSQL(name, room)
+                data.UserLastVisitDates = UserLastVisitDates
+
+                // const data = await getMessagesInfoByRoomSQL(name, room);
                 const { lastMessageId } = data
                 let prevLimit = limit - (lastMessageId - startID)
                 let firstMessages = [];
@@ -238,7 +254,12 @@ module.exports = (io) => {
             try {
 
                 await updateRecordLastIdMessageSQL(user, room, id);//обновляємо id 
+
+                const UserLastVisitDates = await getUserLastVisitDates(room)
                 const data = await getMessagesInfoByRoomSQL(user, room)
+                data.UserLastVisitDates = UserLastVisitDates
+
+                // const data = await getMessagesInfoByRoomSQL(user, room)
                 socket.emit("updateDataIdUser", data);// Отправляем сообщение самому пользователю
             } catch (error) {
                 console.log("updateMessageById ", error);

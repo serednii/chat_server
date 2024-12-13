@@ -2,8 +2,6 @@
 const mysql = require('mysql2');
 const config = require('./configConnection');
 
-
-
 // Створюємо пул з'єднань 
 const pool = mysql.createPool({
     host: config.database.host,
@@ -16,11 +14,7 @@ const pool = mysql.createPool({
     queueLimit: 0
 });
 
-
-
-
 // Додавання нового повідомлення
 insertMessage('This is a test message');
-
 
 module.exports = pool;
