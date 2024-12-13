@@ -25,22 +25,9 @@ const pool = mysql.createPool({
     queueLimit: 0
 });
 
-// console.log('pool***', pool)
-// Функція для вставки повідомлення
-// Функція для вставки повідомлення
-// const insertMessage = async (date, message, author, room, status = 0) => {
-//     const query = 'INSERT INTO chat_messages (date, message, author, room, status) VALUES (?, ?, ?, ?, ?)';
-//     const values = [date, message, author, room, status];
 
-//     pool.promise().query(query, values, (err, results) => {
-//         if (err) {
-//             console.error('Error inserting message into database:', err.stack);
-//             return;
-//         }
-//         console.log('Message added successfully:********', results);
-//         return results.ResultSetHeader;
-//     });
-// };
+
+
 const getFirstMessageByUserAndRoomSQL = async (userName, roomName) => {
     const query = 'SELECT * FROM chat_messages WHERE author = ? AND room = ? ORDER BY date ASC LIMIT 1';
     const values = [userName, roomName];
@@ -116,7 +103,6 @@ const getMessagesByRoomSQL = async (room, callback) => {
         console.error('Error inserting message into database:', err.stack);
         throw err;  // Розповсюджуємо помилку, щоб її можна було обробити вище
     }
-
 };
 
 
@@ -264,6 +250,28 @@ const updateRecordLastIdMessageSQL = async (userName, roomName, lastViewedMessag
     }
 };
 
+const getUsersByRoom = async (roomName) => {
+    const query = `
+        SELECT user_name
+        FROM chat_user_room_last_views_message
+        WHERE room_name = ?
+    `;
+
+    try {
+        // Виконуємо SQL-запит для отримання списку користувачів
+        const [results] = await pool.promise().query(query, [roomName]);
+
+        // Формуємо масив користувачів
+        const userList = results.map(row => row.user_name);
+
+        return userList; // Повертаємо список користувачів
+    } catch (err) {
+        console.error('Error fetching users for room:', err.stack);
+        throw err;
+    }
+};
+
+
 
 const readRecordFirstIdMessageSQL = async (userName, roomName) => {
 
@@ -392,8 +400,7 @@ module.exports = {
     updateMessageByIdSQL,
     getLastMessagesByRoomSQL,
     getMessagesInfoByRoomSQL,
-
-
+    getUsersByRoom,
     updateLastViewedMessageId
 };
 // CREATE TABLE messages (
