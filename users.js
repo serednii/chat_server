@@ -30,29 +30,27 @@ const addUser = (user) => {
   }
 };
 
-
-
-
 const findByIdUser = (id) => {
   const user = users.find((user => user.userSocketId == id))
   return user
 }
 
-
 const findUser = (user) => {
   // console.log('users **********', users)
   // console.log('user  **********', user)
   try {
+
     if (!user) {
       return
     }
+
     const userName = trimStr(user.name);
     const userRoom = trimStr(user.room);
 
     return users.find(
-
       (u) => trimStr(u.name) === userName && trimStr(u.room) === userRoom
     );
+
   } catch (error) {
     console.log("findUser ", error)
   }

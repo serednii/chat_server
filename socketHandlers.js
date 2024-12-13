@@ -13,6 +13,7 @@ const {
     getPrevMessagesByRoomFromIdSQL,
     getMessagesInfoByRoomSQL,
     updateLastViewedMessageId,
+    getUsersByRoom,
 } = require('./sql/sqlQueryMessage');
 ``
 // Импортируем функции для работы с пользователями
@@ -48,6 +49,14 @@ module.exports = (io) => {
                 console.log('userSocketId', userSocketId);
                 socket.join(room); // Подключаем пользователя к комнате
                 console.log("join");
+
+                const usersRoom = await getUsersByRoom(room)
+                console.log('usersRoom', usersRoom)
+                usersRoom.forEach(user => {
+                    addUser({ name: user, room, userSocketId: "test", date: new Date().getTime() })
+                }
+                )
+                console.log(getRoomUsers(room))
                 const newUser = { name, room, userSocketId, date: new Date().getTime() };
                 const { user, isExist } = addUser(newUser); // Добавляем пользователя
                 console.log('room', user.room);
