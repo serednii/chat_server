@@ -4,14 +4,7 @@ const mysql = require('mysql2');
 
 const config = require('./configConnection');
 
-// Створюємо пул з'єднань
-// const connection = mysql.createConnection({
-//     host: config.database.host,
-//     port: config.database.port,
-//     user: config.database.user,
-//     password: config.database.password,
-//     database: config.database.database,
-// });
+
 
 // Створюємо пул з'єднань 
 const pool = mysql.createPool({
@@ -361,10 +354,6 @@ const updateLastViewedMessageId = async (userName, roomName, lastViewedMessageId
     }
 };
 
-
-
-
-//необхідно  прочитати last_viewed_message_id і взнати скільки є повідомлень від last_viewed_message_id до останнього id chat_messages для певної кімнати перероби getCounterNotViewMessage
 
 
 

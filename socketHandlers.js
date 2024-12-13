@@ -46,20 +46,20 @@ module.exports = (io) => {
         socket.on("join", async ({ name, room }) => {
             try {
                 const userSocketId = socket.id;
-                console.log('userSocketId', userSocketId);
+
                 socket.join(room); // Подключаем пользователя к комнате
-                console.log("join");
+
 
                 const usersRoom = await getUsersByRoom(room)
-                console.log('usersRoom', usersRoom)
+
                 usersRoom.forEach(user => {
                     addUser({ name: user, room, userSocketId: "test", date: new Date().getTime() })
                 }
                 )
-                console.log(getRoomUsers(room))
+
                 const newUser = { name, room, userSocketId, date: new Date().getTime() };
                 const { user, isExist } = addUser(newUser); // Добавляем пользователя
-                console.log('room', user.room);
+
 
                 //Обновляємо статус користувача якщо він проявив активнісь поновляємо дату активності 
                 sendDataUserStatus(user); // Отправляем данные пользователя
@@ -67,31 +67,12 @@ module.exports = (io) => {
                     ? `${user.name}, here you go again`
                     : `Hey my love ${user.name}`;
                 //Перевіряємо чи є в масиві кімнат кімната на яку зайшов користувач
-                // const isRoom = isRoomInMessagesRooms(room)
-                // let messagesRoomSQL = null;
 
                 //Якщо нема то витягаємо з бази даних SQL і поміщаємо в масив в памяті
-                // if (!isRoom) {
-                //     const messagesRoomSQL = await getLastMessagesByRoomSQL(user.room, 25)
-                //     console.log('KKKKKKK', messagesRoomSQL[[0]])
-                //     // addMessagesRoom(messagesRoomSQL, user.room)
-                // }
-
                 //Перевіряємо чи є запис останнього id останнього переглянутого повідомлення
                 const res = await recordExistsLastIdMessageSQL(name, room);
-                console.log('HHHHHHHH', res, name, room)
+
                 let messages, startIdMessage;
-                // const { lastMessageId } = data
-                // let prevLimit = limit - (lastMessageId - startID)
-                // let firstMessages = [];
-                // let messages = [];
-                // if (prevLimit > 0 && prevLimit <= limit) {
-                //     firstMessages = await getPrevMessagesByRoomFromIdSQL(room, startID, prevLimit);
-                //     messages = await getNextMessagesByRoomFromIdSQL(room, startID + 1, limit - prevLimit);
-                // } else {
-                //     messages = await getNextMessagesByRoomFromIdSQL(room, startID, limit);
-                // }
-                // messages = [...firstMessages, ...messages];
 
                 const data = await getMessagesInfoByRoomSQL(name, room)
 
@@ -121,8 +102,6 @@ module.exports = (io) => {
                     console.log('LLLLLLLL', startIdMessage)//return id
                 }
 
-                // console.log('messagesRoom*-*-*-*-*-*-*-*-*-', messages);
-                // console.log('messagesRoom*-*-*-*-*-*-*-*-*-', [...messages]);
                 const adminMessage = {
                     author: "Admin",
                     room,
@@ -130,7 +109,6 @@ module.exports = (io) => {
                     id: generateId(),
                     message: userMessage,
                 };
-                // console.log('messagesRoom*-*-*-*-*-*-*-*-*-', [...messages]);
                 messages.push(adminMessage);
 
                 // Отправляем сообщение самому пользователю
@@ -174,8 +152,6 @@ module.exports = (io) => {
                     };
 
                     const data = await getMessagesInfoByRoomSQL(params.name, params.room)
-                    console.log('RRRRRRRR', data)
-                    console.log('insertId***** ****** **** ** **', insertId);
                     io.to(user.room).emit("messageAdd", { message: messageOut, data }); // Отправляем сообщение в комнату
                     updateDateUsersStatus(params); // Обновляем данные пользователя
                 }
@@ -185,10 +161,7 @@ module.exports = (io) => {
         });
 
         socket.on("deleteMessageByIdServer", async ({ id, room }) => {
-            console.log('oooooooooooooooooooooooooo');
 
-            console.log(id);
-            console.log(room);
             try {
                 const result = await deleteMessageByIdSQL(id);//Удаляємо в базі даних на SQL
                 deleteMessageById(id)//Удаляємо в буфері памяті--------------------
@@ -203,7 +176,6 @@ module.exports = (io) => {
             console.log('NNNNNNNNNNNNNNNNNNNNNNN', name, room, startID, limit);
             try {
                 const messages = await getPrevMessagesByRoomFromIdSQL(room, startID, limit);//Удаляємо в базі даних на SQL
-                console.log('getLastMessagesServer nnnnnnnnnnnnnnnnn', messages)
                 // Отправляем сообщение самому пользователю
                 const data = await getMessagesInfoByRoomSQL(name, room)
                 socket.emit("prevMessagesUser", { messages, data });
@@ -219,7 +191,6 @@ module.exports = (io) => {
                 // Отправляем сообщение самому пользователю
                 const data = await getMessagesInfoByRoomSQL(name, room);
                 const messages = await getNextMessagesByRoomFromIdSQL(room, startID, limit);
-                // const messages = await getNextMessagesByRoomFromIdSQL(room, startID, limit);//
                 socket.emit("nextMessagesUser", { messages, data });
             } catch (error) {
                 console.log("getPrevMessagesByRoomFromID ", error);
@@ -227,7 +198,6 @@ module.exports = (io) => {
         });
 
         socket.on("getNextPrevMessagesServer", async ({ name, room, startID, limit }) => {
-            console.log('TTTTTTTTTTTTTTTTTTTTTT', name, room, startID, limit);
 
             try {
                 // Отправляем сообщение самому пользователю
@@ -252,12 +222,10 @@ module.exports = (io) => {
 
         //Обновляємо повідомлення яке ми змінили 
         socket.on("updateMessageByIdServer", async ({ id, room, message }) => {
-            console.log('oooooooooooooooooooooooooo');
             try {
                 await updateMessageByIdSQL(id, message);//
                 // updateMessageById(id, message)//Удаляємо в буфері памяті-------
                 const messagesRoom = getMessagesRoom(room)
-                console.log('messagesRoom', messagesRoom)
                 socket.emit("updateMessageByIdUser", { id, message });// Отправляем сообщение самому пользователю
                 io.to(room).emit("updateMessageByIdUser", { id, message }); // Отправляем сообщение в комнату
             } catch (error) {
@@ -267,13 +235,10 @@ module.exports = (io) => {
 
         //получаємо дані про перший і останній id а також переглянутий id і непрочитанні повідомлення
         socket.on("updateLastIdViewMessageServer", async ({ user, room, id }) => {
-            console.log('AAAAAAAAAAAAAAAAAAAAAAAAAA', user, room, id);
             try {
 
                 await updateRecordLastIdMessageSQL(user, room, id);//обновляємо id 
                 const data = await getMessagesInfoByRoomSQL(user, room)
-                console.log('RRRRRRRR', data)
-
                 socket.emit("updateDataIdUser", data);// Отправляем сообщение самому пользователю
             } catch (error) {
                 console.log("updateMessageById ", error);
@@ -284,9 +249,6 @@ module.exports = (io) => {
         // Обрабатываем событие "sendWrite" (уведомление о наборе текста)
         socket.on("sendWrite", ({ isWrite, params }) => {
             try {
-                console.log("sendWrite params", params);
-                console.log("sendWrite isWrite", isWrite);
-
                 const user = findUser(params);
                 if (user) {
                     updateDateUsersStatus(params); // Обновляем данные пользователя
@@ -317,15 +279,10 @@ module.exports = (io) => {
 
         // Обрабатываем событие отключения пользователя
         socket.on("connected", () => {
-            console.log("User eeeeeeeeeeeeeeeeeeeeeeeeeee");
-            console.log(socket.id);
         });
 
         // Обрабатываем событие отключения пользователя
         socket.on("disconnect", () => {
-            console.log("User disconnected");
-            console.log(socket.id);
-            console.log(findByIdUser(socket.id));
             const user = removeUser(findByIdUser(socket.id));
             handleRemoveUser(user, getUsers());
             console.log(user);
@@ -337,7 +294,6 @@ module.exports = (io) => {
         ///Для тестів
         // Обрабатываем событие "sendWrite" (уведомление о наборе текста)
         socket.on("sendStartNum", async ({ name, room, startID }) => {
-            console.log('TTTTTTTTTTTTTTTTTTTTTT', name, room, startID);
 
             try {
                 updateLastViewedMessageId(name, room, startID)
