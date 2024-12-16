@@ -16,6 +16,47 @@ const pool = mysql.createPool({
     queueLimit: 0
 });
 
+// Функція для перевірки, чи існує користувач за ім'ям
+const checkUserExists = async (name) => {
+    const query = 'SELECT id FROM chat_users WHERE name = ? LIMIT 1';
+    const values = [name];
+
+    try {
+        const [results] = await pool.promise().query(query, values);
+        return results.length > 0; // Якщо такий користувач існує, повертаємо true
+    } catch (err) {
+        console.error('Error checking user existence:', err.stack);
+        throw err;
+    }
+};
+
+// Функція для додавання користувача, якщо він не існує
+const insertUserSql = async ({ name, status = "user", avatar = "" }) => {
+    // Перевірка, чи існує користувач з таким ім'ям
+    const userExists = await checkUserExists(name);
+    if (userExists) {
+        console.log('User already exists.');
+        return { message: 'User already exists' }; // Якщо користувач вже існує
+    }
+
+    // Якщо користувача немає, додаємо нового
+    const query = `
+        INSERT INTO chat_users (name, status, avatar)
+        VALUES (?, ?, ?);
+    `;
+    const values = [name, status, avatar];
+
+    try {
+        const [result] = await pool.promise().query(query, values);
+        console.log('User added successfully', result);
+        return result; // Повертає результат запиту
+    } catch (err) {
+        console.error('Error adding user:', err.stack);
+        throw err; // Якщо сталася помилка, викидаємо її
+    }
+};
+
+
 const getFirstMessageByUserAndRoomSQL = async (userName, roomName) => {
     updateLastVisitDate(userName)
     const query = 'SELECT * FROM chat_messages WHERE author = ? AND room = ? ORDER BY date ASC LIMIT 1';
@@ -56,11 +97,6 @@ const getLastMessageByRoomSQL = async (roomName) => {
     }
 };
 
-
-
-
-
-
 const insertMessageSQL = async (date, message, author, room) => {
     updateLastVisitDate(author)
     const query = 'INSERT INTO chat_messages (date, message, author, room) VALUES (?, ?, ?, ?)';
@@ -75,6 +111,7 @@ const insertMessageSQL = async (date, message, author, room) => {
         throw err;  // Розповсюджуємо помилку, щоб її можна було обробити вище
     }
 };
+
 // INSERT INTO chat_messages(date, message, author, room) VALUES(?, ?, ?, ?)'
 // згенерувати sql запити для вставки в базу даних 500шт 
 // Назва room "test"
@@ -246,6 +283,8 @@ const updateRecordLastIdMessageSQL = async (userName, roomName, lastViewedMessag
     }
 };
 
+
+
 const getUsersByRoom = async (roomName) => {
 
     const query = `
@@ -356,24 +395,34 @@ const updateLastVisitDate = async (userName) => {
 
 const getUserLastVisitDates = async (roomName) => {
     const query = `
-        SELECT user_name, last_visit_date
-        FROM chat_user_room_last_views_message
-        WHERE room_name = ?;
+        SELECT 
+            curvm.user_name, 
+            curvm.last_visit_date, 
+            cu.avatar
+        FROM 
+            chat_user_room_last_views_message AS curvm
+        JOIN 
+            chat_users AS cu
+        ON 
+            curvm.user_name = cu.name
+        WHERE 
+            curvm.room_name = ?;
     `;
     const values = [roomName];
 
     try {
         const [results] = await pool.promise().query(query, values);
-        return results; // Повертає масив об'єктів з user_name і last_visit_date
+        return results; // Повертає масив об'єктів з user_name, last_visit_date і avatar
         // [
-        //     { "user_name": "JohnDoe", "last_visit_date": "2024-12-12T14:30:00.000Z" },
-        //     { "user_name": "JaneSmith", "last_visit_date": "2024-12-13T09:15:00.000Z" }
+        //     { "user_name": "JohnDoe", "last_visit_date": "2024-12-12T14:30:00.000Z", "avatar": "johndoe.jpg" },
+        //     { "user_name": "JaneSmith", "last_visit_date": "2024-12-13T09:15:00.000Z", "avatar": "janesmith.png" }
         // ]
     } catch (err) {
         console.error('Error fetching last visit dates:', err.stack);
         throw err;
     }
 };
+
 
 
 //для тестів
@@ -402,6 +451,7 @@ const updateLastViewedMessageId = async (userName, roomName, lastViewedMessageId
 // );
 
 module.exports = {
+    insertUserSql,
     getPrevMessagesByRoomFromIdSQL,
     readRecordFirstIdMessageSQL,
     getNextMessagesByRoomFromIdSQL,
