@@ -14,6 +14,8 @@ const {
     getMessagesInfoByRoomSQL,
     updateLastViewedMessageId,
     getUsersByRoom,
+    getUserLastVisitDates,
+    insertUserSql,
 } = require('./sql/sqlQueryMessage');
 ``
 // Импортируем функции для работы с пользователями
@@ -48,18 +50,19 @@ module.exports = (io) => {
                 const userSocketId = socket.id;
 
                 socket.join(room); // Подключаем пользователя к комнате
+                await insertUserSql({ name });
 
-
+                // Виконуємо SQL-запит для отримання списку користувачів
                 const usersRoom = await getUsersByRoom(room)
 
                 usersRoom.forEach(user => {
                     addUser({ name: user, room, userSocketId: "test", date: new Date().getTime() })
                 }
+
                 )
 
                 const newUser = { name, room, userSocketId, date: new Date().getTime() };
                 const { user, isExist } = addUser(newUser); // Добавляем пользователя
-
 
                 //Обновляємо статус користувача якщо він проявив активнісь поновляємо дату активності 
                 sendDataUserStatus(user); // Отправляем данные пользователя
@@ -74,10 +77,10 @@ module.exports = (io) => {
 
                 let messages, startIdMessage;
 
+                const lastUserVisitTime = await getUserLastVisitDates(room)
                 const data = await getMessagesInfoByRoomSQL(name, room)
-
+                data.lastUserVisitTime = lastUserVisitTime
                 let { lastMessageId, viewMessageId } = data
-
 
                 if (res) {
                     //Якщо повідомлення є то беремо останнє прочитане повідомлення
@@ -109,6 +112,7 @@ module.exports = (io) => {
                     id: generateId(),
                     message: userMessage,
                 };
+
                 messages.push(adminMessage);
 
                 // Отправляем сообщение самому пользователю
@@ -151,7 +155,11 @@ module.exports = (io) => {
                         room: params.room,
                     };
 
+                    const lastUserVisitTime = await getUserLastVisitDates(params.room)
                     const data = await getMessagesInfoByRoomSQL(params.name, params.room)
+                    data.lastUserVisitTime = lastUserVisitTime
+
+                    // const data = await getMessagesInfoByRoomSQL(params.name, params.room)
                     io.to(user.room).emit("messageAdd", { message: messageOut, data }); // Отправляем сообщение в комнату
                     updateDateUsersStatus(params); // Обновляем данные пользователя
                 }
@@ -177,7 +185,10 @@ module.exports = (io) => {
             try {
                 const messages = await getPrevMessagesByRoomFromIdSQL(room, startID, limit);//Удаляємо в базі даних на SQL
                 // Отправляем сообщение самому пользователю
+                const lastUserVisitTime = await getUserLastVisitDates(room)
                 const data = await getMessagesInfoByRoomSQL(name, room)
+                data.lastUserVisitTime = lastUserVisitTime
+                // const data = await getMessagesInfoByRoomSQL(name, room)
                 socket.emit("prevMessagesUser", { messages, data });
             } catch (error) {
                 console.log("getPrevMessagesByRoomFromID ", error);
@@ -189,7 +200,11 @@ module.exports = (io) => {
             console.log('TTTTTTTTTTTTTTTTTTTTTT', name, room, startID, limit);
             try {
                 // Отправляем сообщение самому пользователю
-                const data = await getMessagesInfoByRoomSQL(name, room);
+                const lastUserVisitTime = await getUserLastVisitDates(room)
+                const data = await getMessagesInfoByRoomSQL(name, room)
+                data.lastUserVisitTime = lastUserVisitTime
+
+                // const data = await getMessagesInfoByRoomSQL(name, room);
                 const messages = await getNextMessagesByRoomFromIdSQL(room, startID, limit);
                 socket.emit("nextMessagesUser", { messages, data });
             } catch (error) {
@@ -201,7 +216,11 @@ module.exports = (io) => {
 
             try {
                 // Отправляем сообщение самому пользователю
-                const data = await getMessagesInfoByRoomSQL(name, room);
+                const lastUserVisitTime = await getUserLastVisitDates(room)
+                const data = await getMessagesInfoByRoomSQL(name, room)
+                data.lastUserVisitTime = lastUserVisitTime
+
+                // const data = await getMessagesInfoByRoomSQL(name, room);
                 const { lastMessageId } = data
                 let prevLimit = limit - (lastMessageId - startID)
                 let firstMessages = [];
@@ -238,13 +257,17 @@ module.exports = (io) => {
             try {
 
                 await updateRecordLastIdMessageSQL(user, room, id);//обновляємо id 
+
+                const lastUserVisitTime = await getUserLastVisitDates(room)
                 const data = await getMessagesInfoByRoomSQL(user, room)
+                data.lastUserVisitTime = lastUserVisitTime
+
+                // const data = await getMessagesInfoByRoomSQL(user, room)
                 socket.emit("updateDataIdUser", data);// Отправляем сообщение самому пользователю
             } catch (error) {
                 console.log("updateMessageById ", error);
             }
         });
-
 
         // Обрабатываем событие "sendWrite" (уведомление о наборе текста)
         socket.on("sendWrite", ({ isWrite, params }) => {
